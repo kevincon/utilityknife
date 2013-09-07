@@ -47,7 +47,8 @@ def dropbox_auth_finish():
 @app.route('/success')
 def success():
     client = DropboxClient(session['access_token'])
-    return str(walk(client, client.metadata('/')))
+    data = walk(client, client.metadata('/'))
+    return render_template('display.html', json_data=data)
 
 
 def walk(client, metadata):
@@ -70,7 +71,7 @@ def walk(client, metadata):
 def display():
     # Load the flare.json file and pass it into the template.
     json_data = ""
-    with open('flare.json', 'r') as f:
+    with open('dropbox.json', 'r') as f:
         json_data = json.load(f)
     return render_template('display.html', json_data=json_data)
 
