@@ -1,78 +1,391 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
-TOP :D
+<html>
+<body>
+<p id="chart"></p>
 <style>
+      /* tables */
+      table.tablesorter {
+        font-family:arial;
+        background-color: #CDCDCD;
+        margin:10px 0pt 15px;
+        font-size: 8pt;
+        width: 100%;
+        text-align: left;
+      }
+      table.tablesorter thead tr th, table.tablesorter tfoot tr th {
+        background-color: #e6EEEE;
+        border: 1px solid #FFF;
+        font-size: 8pt;
+        padding: 4px;
+      }
+      table.tablesorter thead tr .header {
+        background-image: url("images/bg.gif");
+        background-repeat: no-repeat;
+        background-position: center right;
+        cursor: pointer;
+      }
+      table.tablesorter tbody td {
+        color: #3D3D3D;
+        padding: 4px;
+        background-color: #FFF;
+        vertical-align: top;
+      }
+      table.tablesorter tbody tr.odd td {
+        background-color:#F0F0F6;
+      }
+      table.tablesorter thead tr .headerSortUp {
+        background-image: url("images/asc.gif");
+      }
+      table.tablesorter thead tr .headerSortDown {
+        background-image: url("images/desc.gif");
+      }
+      table.tablesorter thead tr .headerSortDown, table.tablesorter thead tr .headerSortUp {
+      background-color: #8dbdd8;
+      }
 
-body {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  margin: auto;
-  position: relative;
-  width: 960px;
-}
+      .disclaimer {
+        color:  #999;
+        font-size:  70%;
+      }
 
-form {
-  position: absolute;
-  right: 10px;
-  top: 10px;
-}
+      .c100 {
+        background-color: #B2C2D1;
+      }
 
-.node {
-  border: solid 1px white;
-  font: 10px sans-serif;
-  line-height: 12px;
-  overflow: hidden;
-  position: absolute;
-  text-indent: 2px;
-}
+      .c200 {
+        background-color: #F76e4a;
+      }
 
-</style>
-<form>
-  <label><input type="radio" name="mode" value="size" checked> Size</label>
-  <label><input type="radio" name="mode" value="count"> Count</label>
-</form>
+      .c300 {
+        background-color: #efdfbb;
+      }
+
+      .c400 {
+        color:  #ddd;
+        background-color: #335d6b;
+      }
+
+      .c500 {
+        background-color: #7aBa7f;
+      }
+
+      .c700 {
+        color:  #ddd;
+        background-color: #88898b;
+      }
+
+      .c800 {
+        background-color: #ff99cc;
+      }
+
+      .c900 {
+        background-color: #99ffcc;
+      }
+
+      .about {
+        color:  #555;
+        font-size:  80%;
+      }
+
+      .navigate {
+        font-size: 100%;
+        margin-left:  3px;
+      }
+
+      .budgetinfo {
+        position: absolute;
+        top:  50px;
+        left:  800px;
+        background-color:  #bce6fa;
+        font-size: 80%;
+        padding:  10px;
+        -moz-border-radius: 5px;
+        border-radius: 5px;
+        border: 1px solid #DDDDDD;
+      }
+
+      ul .nav .nav-pills {
+        margin-bottom: 0px;
+      }
+
+      #chart {
+        width: 960px;
+        height:500px;
+      }
+
+      text {
+        pointer-events: none;
+      }
+
+      .grandparent text {
+        font-weight: normal;
+        font-size: 150%;
+        color:  #DDD;
+      }
+
+      #resultstable {
+        font-size:  80%;
+
+      }
+
+      rect {
+        fill: none;
+        stroke: #bce6fa;
+      }
+
+      rect.parent,
+      .grandparent rect {
+        stroke-width: 5px;
+      }
+
+      rect.parent:hover {
+          outline: 1px solid #883;
+      }
+
+      .grandparent rect {
+        fill: #bce6fa;
+      }
+
+      .children rect.parent,
+      .grandparent rect {
+        cursor: pointer;
+      }
+
+      rect.parent {
+        pointer-events: all;
+      }
+
+      .children:hover rect.child,
+      .grandparent:hover rect {
+        fill: #EEE;
+
+      }
+    </style>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
 
-var margin = {top: 40, right: 10, bottom: 10, left: 10},
-    width = 960 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
+var margin = {top: 30, right: 0, bottom: 0, left: 0},
+    width = 960,
+    height = 500 - margin.top - margin.bottom,
+    formatNumber = d3.format(",d"),
+    transitioning;
 
-var color = d3.scale.category20c();
+// We used to use this when using d3's standard color schemes
+var color = d3.scale.category20();
+
+var x = d3.scale.linear()
+    .domain([0, width])
+    .range([0, width]);
+
+var y = d3.scale.linear()
+    .domain([0, height])
+    .range([0, height]);
 
 var treemap = d3.layout.treemap()
-    .size([width, height])
-    .sticky(true)
-    .value(function(d) { return d.size; });
+    .children(function(d, depth) { return depth ? null : d.children; })
+    .sort(function(a, b) { return a.value - b.value; })
+    .ratio(height / width * 0.5 * (1 + Math.sqrt(5)))
+    .round(false);
 
-var div = d3.select("body").append("div")
-    .style("position", "relative")
-    .style("width", (width + margin.left + margin.right) + "px")
-    .style("height", (height + margin.top + margin.bottom) + "px")
-    .style("left", margin.left + "px")
-    .style("top", margin.top + "px");
+var svg = d3.select("#chart").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.bottom + margin.top)
+    .style("margin-left", -margin.left + "px")
+    .style("margin.right", -margin.right + "px")
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+    .style("shape-rendering", "crispEdges");
 
-  var json_data = {{ json_data|tojson|safe }};
+var grandparent = svg.append("g")
+    .attr("class", "grandparent");
 
-    var node = div.datum(json_data).selectAll(".node")
-      .data(treemap.nodes)
-      .enter().append("div")
-      .attr("class", "node")
-      .call(position)
-      .style("background", function(d) { return d.children ? color(d.name) : null; })
-      .text(function(d) { return d.children ? null : d.name; });
+grandparent.append("rect")
+    .attr("y", -margin.top)
+    .attr("width", width)
+    .attr("height", margin.top);
+grandparent.append("text")
+    .attr("fill", "#777")
+    .style("letter-spacing", "+0.05em")
+    .attr("x", 6)
+    .attr("y",  margin.top - 60)
+    .attr("dy", "0.5em");
 
-  d3.selectAll("input").on("change", function change() {
-    var value = this.value === "count"
-        ? function() { return 1; }
-        : function(d) { return d.size; };
+var root = {{ json_data|tojson|safe }};
 
-    node
-        .data(treemap.value(value).nodes)
-        .transition()
-        .duration(1500)
-        .call(position);
+initialize(root);
+accumulate(root);
+layout(root);
+display(root);
 
-});
+function initialize(root) {
+  root.x = root.y = 0;
+  root.dx = width;
+  root.dy = height;
+  root.depth = 0;
+}
+
+// Aggregate the values for internal nodes. This is normally done by the
+// treemap layout, but not here because of our custom implementation.
+function accumulate(d) {
+  return d.children
+      ? d.value = d.children.reduce(function(p, v) { return p + accumulate(v); }, 0)
+      : d.value;
+}
+
+// Compute the treemap layout recursively such that each group of siblings
+// uses the same size (1x1) rather than the dimensions of the parent cell.
+// This optimizes the layout for the current zoom state. Note that a wrapper
+// object is created for the parent node for each group of siblings so that
+// the parent's dimensions are not discarded as we recurse. Since each group
+// of sibling was laid out in 1x1, we must rescale to fit using absolute
+// coordinates. This lets us use a viewport to zoom.
+function layout(d) {
+  if (d.children) {
+    treemap.nodes({children: d.children});
+    d.children.forEach(function(c) {
+      c.x = d.x + c.x * d.dx;
+      c.y = d.y + c.y * d.dy;
+      c.dx *= d.dx;
+      c.dy *= d.dy;
+      c.parent = d;
+      layout(c);
+    });
+  }
+}
+
+function display(d) {
+
+  grandparent
+      .datum(d.parent)
+      .on("click", transition)
+    .select("text")
+      .attr("dy", "1.5em")
+      .text(name(d) + " : " + d.value + " bytes");
+
+  var g1 = svg.insert("g", ".grandparent")
+      .datum(d)
+      .attr("class", "depth");
+
+  var g = g1.selectAll("g")
+      .data(d.children)
+    .enter().append("g");
+
+  g.filter(function(d) { return d.children; })
+      .classed("children", true)
+      .on("click", transition);
+
+  g.selectAll(".child")
+      .data(function(d) { return d.children || [d]; })
+    .enter().append("rect")
+      .attr("class", "child")
+      .call(rect);
+
+  g.append("rect")
+      .attr("class", "parent")
+      .attr("data-placement", "top")
+      .attr("title", "Tooltip test")
+      .attr("rel", "tooltip")
+      .call(rect)
+    .append("title")
+      .text(function(d) { return formatNumber(d.value); });
+
+  g.append("text")
+      .attr("dy", ".75em")
+      .attr("fill", "#333")
+      .text(function(d) {
+              var w = (d.dx  / d.parent.dx) * 960;
+              if (d.name.length*6.5 < ((d.dx / d.parent.dx) * 960) && ((d.dy / d.parent.dy) * 500) > 18 && (w > 100)) {
+                d.hiddendata = false;
+                return d.name;
+              }
+              else {
+                d.hiddendata = true;
+                return "";
+              }
+            })
+      .call(text);
+  g.append("text")
+      .attr("dy", "1.75em")
+      .attr("fill", "#333")
+      .text( function(d) {
+              return d.value;
+           })
+      .call(text);
+
+  function transition(d) {
+    if (transitioning || !d) return;
+    transitioning = true;
+
+    var g2 = display(d),
+        t1 = g1.transition().duration(750),
+        t2 = g2.transition().duration(750);
+
+    // Update the domain only after entering new elements.
+    x.domain([d.x, d.x + d.dx]);
+    y.domain([d.y, d.y + d.dy]);
+
+    // Enable anti-aliasing during the transition.
+    svg.style("shape-rendering", null);
+
+    // Draw child nodes on top of parent nodes.
+    svg.selectAll(".depth").sort(function(a, b) { return a.depth - b.depth; });
+
+    // Fade-in entering text.
+    g2.selectAll("text").style("fill-opacity", 0);
+
+    // Transition to the new view.
+    t1.selectAll("text").call(text).style("fill-opacity", 0);
+    t2.selectAll("text").call(text).style("fill-opacity", 1);
+    t1.selectAll("rect").call(rect);
+    t2.selectAll("rect").call(rect);
+
+
+    // Remove the old node when the transition is finished.
+    t1.remove().each("end", function() {
+      svg.style("shape-rendering", "crispEdges");
+      transitioning = false;
+    });
+  }
+
+  return g;
+}
+
+function text(text) {
+  text.attr("x", function(d) { return x(d.x) + 6; })
+      .style("font-size", function(d) {
+                            var size = "12px";
+                              d.namedisplay = d.name;
+                            return size;
+                          })
+      .attr("y", function(d) { return y(d.y) + 6; });
+}
+
+function rect(rect) {
+  rect.attr("x", function(d) { return x(d.x); })
+      .attr("y", function(d) { return y(d.y); })
+      .attr("width", function(d) { tempwidth = x(d.x + d.dx) - x(d.x); return tempwidth > 0 ? tempwidth : 0; })
+      .attr("height", function(d) { return y(d.y + d.dy) - y(d.y); })
+  .style("fill", function(d) {
+          if (d.parent.parent != null) {
+              if (d.parent.parent.parent != null) {
+                return color(d.parent.name.substr(6,3));
+              }
+              else {
+                return color(d.name.substr(6, 3));
+              }
+          }
+          else {
+            return "none";
+          }
+        }
+      );
+}
+
+function name(d) {
+  return d.parent
+      ?  name(d.parent) + " : " + d.name
+      : "Home : " + d.name;
+}
 
 function position() {
   this.style("left", function(d) { return d.x + "px"; })
@@ -82,5 +395,5 @@ function position() {
 }
 
 </script>
-
-BOTTOM :D
+</body>
+</html>

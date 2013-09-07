@@ -60,7 +60,7 @@ def walk(client, metadata):
         if bytes is 0:
             result['children'].append(walk(client, client.metadata(path)))
         else:
-            child = {'name':basename(path), 'size':bytes}
+            child = {'name':basename(path), 'value':bytes}
             result['children'].append(child)
     #empty directories? do we care?
     if len(result['children']) is 0:
