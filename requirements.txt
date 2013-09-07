@@ -4,6 +4,5 @@ MarkupSafe==0.18
 Werkzeug==0.9.4
 gunicorn==18.0
 itsdangerous==0.23
-python-tesseract==tesseract
 wsgiref==0.1.2
 wxPython-common==2.9.4.0
