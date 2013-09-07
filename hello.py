@@ -1,47 +1,73 @@
 from dropbox.client import DropboxOAuth2Flow, DropboxClient
 from secrets import *
-from flask import Flask, render_template, session
+from flask import Flask, render_template, session, redirect, abort, url_for, request
+from os.path import basename
+
 app = Flask(__name__)
 
 def get_dropbox_auth_flow(web_app_session):
     return DropboxOAuth2Flow(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, DROPBOX_APP_REDIRECT,
                              web_app_session, "dropbox-auth-csrf-token")
 
-def dropbox_auth_start(web_app_session, request):
+def dropbox_auth_start(web_app_session):
     authorize_url = get_dropbox_auth_flow(web_app_session).start()
-    redirect_to(authorize_url)
+    return redirect(authorize_url)
 
 # URL handler for root
 @app.route('/')
 def start():
-    dropbox_auth_start(session, None)
+    return dropbox_auth_start(session)
 
 # URL handler for /dropbox-auth-finish
 @app.route('/dropbox-auth-finish')
-def dropbox_auth_finish(web_app_session, request):
+def dropbox_auth_finish():
     try:
+        code = request.args.get('code')
+        state = request.args.get('state')
         access_token, user_id, url_state = \
-                get_dropbox_auth_flow(web_app_session).finish(request.query_params)
+                get_dropbox_auth_flow(session).finish({'code':code, 'state':state})
     except DropboxOAuth2Flow.BadRequestException, e:
-        http_status(400)
+        abort(400)
     except DropboxOAuth2Flow.BadStateException, e:
         # Start the auth flow again.
-        redirect_to("/dropbox-auth-start")
+        return redirect("/dropbox-auth-start")
     except DropboxOAuth2Flow.CsrfException, e:
-        http_status(403)
+        print 'csrf exception'
+        abort(403)
     except DropboxOAuth2Flow.NotApprovedException, e:
-        flash('Not approved?  Why not, bro?')
-        return redirect_to("/home")
+        return redirect("/")
     except DropboxOAuth2Flow.ProviderException, e:
-        logger.log("Auth error: %s" % (e,))
-        http_status(403)
+        print 'provider exception'
+        abort(403)
 
-    redirect_to('/success')
+    session['access_token'] = access_token
+
+    return redirect(url_for('success'))
 
 @app.route('/success')
 def success():
-    return "HOLY SHIT"
+    client = DropboxClient(session['access_token'])
+    return str(walk(client, client.metadata('/')))
+
+
+def walk(client, metadata):
+    dir_path = basename(metadata['path'])
+    result = {'name':basename(dir_path), 'children':[]}
+    for dir_entry in metadata['contents']:
+        path = dir_entry['path']
+        bytes = dir_entry['bytes']
+        if bytes is 0:
+            result['children'].append(walk(client, client.metadata(path)))
+        else:
+            child = {'name':basename(path), 'size':bytes}
+            result['children'].append(child)
+    #empty directories? do we care?
+    if len(result['children']) is 0:
+        _ = result.pop('children', None)
+    return result
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
+    app.debug = True
+    app.run()
