@@ -1,6 +1,7 @@
 from dropbox.client import DropboxOAuth2Flow, DropboxClient
 from secrets import *
 from flask import Flask, render_template, session
+import json
 app = Flask(__name__)
 
 def get_dropbox_auth_flow(web_app_session):
@@ -42,6 +43,13 @@ def dropbox_auth_finish(web_app_session, request):
 def success():
     return "HOLY SHIT"
 
+@app.route('/display')
+def display():
+    # Load the flare.json file and pass it into the template.
+    json_data = ""
+    with open('flare.json', 'r') as f:
+        json_data = json.load(f)
+    return render_template('display.html', json_data=json_data)
 
 if __name__ == '__main__':
     app.run(debug=True)
