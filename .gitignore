@@ -36,3 +36,6 @@ nosetests.xml
 
 # virtualenv
 venv
+
+# app-specific
+secrets.py
