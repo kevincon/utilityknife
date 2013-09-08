@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{% block title %}{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap -->
+    <style>
+      #chart {
+        width: 960px;
+        height:500px;
+      }
+
+      .grandparent text {
+        font-weight: normal;
+        font-size: 100%;
+        color:  #DDD;
+      }
+
+      rect {
+        fill: none;
+        stroke: #ffffff;
+      }
+
+      rect.parent,
+      .grandparent rect {
+        stroke-width: 1px;
+      }
+
+      rect.parent:hover {
+        outline: 1px solid #883;
+      }
+
+      .children rect.parent,
+      .grandparent rect {
+        cursor: pointer;
+      }
+
+      rect.parent {
+        pointer-events: all;
+      }
+
+      .children:hover rect.child,
+      .grandparent:hover rect {
+        fill: #EEE;
+      }
+    </style>
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="static/css/tt.css">
+    <link rel="shortcut icon" href="/static/images/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon">
+  </head>
+
+  <body style>
+    <a href="https://github.com/kevincon/utilityknife"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
+    <div class="container">
+      <div class="page-header">
+        <a href="/"><img src="static/images/logo.png" alt="Utility Knife"></a>
+      </div>
+      {% block content %}{% endblock %}
+    </div>
+    <hr>
+    <footer align="center">
+
+      <p>Built in under 40 hours by <a href="http://www.kevintechnology.com">Kevin Conley</a> and <a href="http://www.linkedin.com/pub/carolynn-sullivan/7b/917/280/">Carolynn Sullivan</a> at the <a href="http://2013f.pennapps.com/">Penn Apps Fall 2013 hackathon</a>. Special thanks to Evan Benshetler and Greg Terrono.</p>
+    </footer>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="//code.jquery.com/jquery.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+    <script src="static/js/tt.js"></script>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-43819090-1', 'utilityknife.herokuapp.com');
+      ga('send', 'pageview');
+    </script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

@@ -1,176 +1,24 @@
-<!DOCTYPE html>
-<html>
-<body>
-<p id="chart"></p>
-<style>
-      /* tables */
-      table.tablesorter {
-        font-family:arial;
-        background-color: #CDCDCD;
-        margin:10px 0pt 15px;
-        font-size: 8pt;
-        width: 100%;
-        text-align: left;
-      }
-      table.tablesorter thead tr th, table.tablesorter tfoot tr th {
-        background-color: #e6EEEE;
-        border: 1px solid #FFF;
-        font-size: 8pt;
-        padding: 4px;
-      }
-      table.tablesorter thead tr .header {
-        background-image: url("images/bg.gif");
-        background-repeat: no-repeat;
-        background-position: center right;
-        cursor: pointer;
-      }
-      table.tablesorter tbody td {
-        color: #3D3D3D;
-        padding: 4px;
-        background-color: #FFF;
-        vertical-align: top;
-      }
-      table.tablesorter tbody tr.odd td {
-        background-color:#F0F0F6;
-      }
-      table.tablesorter thead tr .headerSortUp {
-        background-image: url("images/asc.gif");
-      }
-      table.tablesorter thead tr .headerSortDown {
-        background-image: url("images/desc.gif");
-      }
-      table.tablesorter thead tr .headerSortDown, table.tablesorter thead tr .headerSortUp {
-      background-color: #8dbdd8;
-      }
+{% extends "layout.html" %}
 
-      .disclaimer {
-        color:  #999;
-        font-size:  70%;
-      }
+{% block title %}Utility Knife - {{ username }}'s Dropbox{% endblock %}
 
-      .c100 {
-        background-color: #B2C2D1;
-      }
+{% block content %}
 
-      .c200 {
-        background-color: #F76e4a;
-      }
+<div align="center">
+  <p><b>{{ username }}'s Dropbox:</b> {{ used }} / {{ quota }}</p>
+  <div id="chart"></div>
+</div>
 
-      .c300 {
-        background-color: #efdfbb;
-      }
+{% endblock %}
 
-      .c400 {
-        color:  #ddd;
-        background-color: #335d6b;
-      }
-
-      .c500 {
-        background-color: #7aBa7f;
-      }
-
-      .c700 {
-        color:  #ddd;
-        background-color: #88898b;
-      }
-
-      .c800 {
-        background-color: #ff99cc;
-      }
-
-      .c900 {
-        background-color: #99ffcc;
-      }
-
-      .about {
-        color:  #555;
-        font-size:  80%;
-      }
-
-      .navigate {
-        font-size: 100%;
-        margin-left:  3px;
-      }
-
-      .budgetinfo {
-        position: absolute;
-        top:  50px;
-        left:  800px;
-        background-color:  #bce6fa;
-        font-size: 80%;
-        padding:  10px;
-        -moz-border-radius: 5px;
-        border-radius: 5px;
-        border: 1px solid #DDDDDD;
-      }
-
-      ul .nav .nav-pills {
-        margin-bottom: 0px;
-      }
-
-      #chart {
-        width: 960px;
-        height:500px;
-      }
-
-      text {
-        pointer-events: none;
-      }
-
-      .grandparent text {
-        font-weight: normal;
-        font-size: 150%;
-        color:  #DDD;
-      }
-
-      #resultstable {
-        font-size:  80%;
-
-      }
-
-      rect {
-        fill: none;
-        stroke: #bce6fa;
-      }
-
-      rect.parent,
-      .grandparent rect {
-        stroke-width: 5px;
-      }
-
-      rect.parent:hover {
-          outline: 1px solid #883;
-      }
-
-      .grandparent rect {
-        fill: #bce6fa;
-      }
-
-      .children rect.parent,
-      .grandparent rect {
-        cursor: pointer;
-      }
-
-      rect.parent {
-        pointer-events: all;
-      }
-
-      .children:hover rect.child,
-      .grandparent:hover rect {
-        fill: #EEE;
-
-      }
-    </style>
-<script src="http://d3js.org/d3.v3.min.js"></script>
+{% block scripts %}
+<script src="static/js/d3.v2.js"></script>
 <script>
-
 var margin = {top: 30, right: 0, bottom: 0, left: 0},
-    width = 960,
-    height = 500 - margin.top - margin.bottom,
-    formatNumber = d3.format(",d"),
+    width = $("#chart").width(),
+    height = $("#chart").height() - margin.top - margin.bottom,
     transitioning;
 
-// We used to use this when using d3's standard color schemes
 var color = d3.scale.category20();
 
 var x = d3.scale.linear()
@@ -190,8 +38,8 @@ var treemap = d3.layout.treemap()
 var svg = d3.select("#chart").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.bottom + margin.top)
-    .style("margin-left", -margin.left + "px")
-    .style("margin.right", -margin.right + "px")
+    .style("margin-left", - margin.left + "px")
+    .style("margin.right", - margin.right + "px")
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
     .style("shape-rendering", "crispEdges");
@@ -209,6 +57,11 @@ grandparent.append("text")
     .attr("x", 6)
     .attr("y",  margin.top - 60)
     .attr("dy", "0.5em");
+
+// Initialize tooltips
+$(document).ready(function () {
+  $("[rel=tooltip]").tooltip();
+});
 
 var root = {{ json_data|tojson|safe }};
 
@@ -253,14 +106,25 @@ function layout(d) {
   }
 }
 
-function display(d) {
+function humanReadable(bytes) {
+  if (bytes < 1024) { // < 1 KB
+    return bytes;
+  } else if (bytes < 1048576) { // < 1 MB
+    return (bytes / 1024).toFixed(2) + " KB";
+  } else if (bytes < 1073741824) { // < 1 GB
+    return (bytes / 1048576).toFixed(2) + " MB";
+  } else { // > 1 GB
+    return (bytes / 1073741824).toFixed(2) + " GB";
+  }
+}
 
+function display(d) {
   grandparent
       .datum(d.parent)
       .on("click", transition)
     .select("text")
       .attr("dy", "1.5em")
-      .text(name(d) + " : " + d.value + " bytes");
+      .text(name(d) + " : " + humanReadable(d.value) + "     (click here to go back a level)");
 
   var g1 = svg.insert("g", ".grandparent")
       .datum(d)
@@ -268,37 +132,37 @@ function display(d) {
 
   var g = g1.selectAll("g")
       .data(d.children)
-    .enter().append("g");
+      .enter().append("g");
 
   g.filter(function(d) { return d.children; })
       .classed("children", true)
       .on("click", transition);
 
-  g.selectAll(".child")
-      .data(function(d) { return d.children || [d]; })
-    .enter().append("rect")
-      .attr("class", "child")
-      .call(rect);
+  g.filter(function(d) { return !d.children; })
+      .on("click", goto_dropbox);
 
   g.append("rect")
       .attr("class", "parent")
       .attr("data-placement", "top")
       .attr("title", "Tooltip test")
       .attr("rel", "tooltip")
-      .call(rect)
-    .append("title")
-      .text(function(d) { return formatNumber(d.value); });
+      .call(rect);
 
   g.append("text")
       .attr("dy", ".75em")
       .attr("fill", "#333")
       .text(function(d) {
-              var w = (d.dx  / d.parent.dx) * 960;
-              if (d.name.length*6.5 < ((d.dx / d.parent.dx) * 960) && ((d.dy / d.parent.dy) * 500) > 18 && (w > 100)) {
-                d.hiddendata = false;
-                return d.name;
-              }
-              else {
+              if (d.children) {
+                var w = (d.dx  / d.parent.dx) * width;
+                if (d.name.length*6.5 < ((d.dx / d.parent.dx) * width) && ((d.dy / d.parent.dy) * height) > 18 && (w > 100)) {
+                  d.hiddendata = false;
+                  return d.name;
+                }
+                else {
+                  d.hiddendata = true;
+                  return "";
+                }
+              } else {
                 d.hiddendata = true;
                 return "";
               }
@@ -308,9 +172,18 @@ function display(d) {
       .attr("dy", "1.75em")
       .attr("fill", "#333")
       .text( function(d) {
-              return d.value;
+              if (d.hiddendata) {
+                return "";
+              } else {
+                return humanReadable(d.value);
+              }
            })
       .call(text);
+
+  function goto_dropbox(d) {
+    if (transitioning || !d) return;
+    document.location.href = "https://www.dropbox.com/home" + name(d.parent);
+  }
 
   function transition(d) {
     if (transitioning || !d) return;
@@ -353,7 +226,7 @@ function display(d) {
 function text(text) {
   text.attr("x", function(d) { return x(d.x) + 6; })
       .style("font-size", function(d) {
-                            var size = "12px";
+                            var size = "18px";
                               d.namedisplay = d.name;
                             return size;
                           })
@@ -366,25 +239,17 @@ function rect(rect) {
       .attr("width", function(d) { tempwidth = x(d.x + d.dx) - x(d.x); return tempwidth > 0 ? tempwidth : 0; })
       .attr("height", function(d) { return y(d.y + d.dy) - y(d.y); })
   .style("fill", function(d) {
-          if (d.parent.parent != null) {
-              if (d.parent.parent.parent != null) {
-                return color(d.parent.name.substr(6,3));
-              }
-              else {
-                return color(d.name.substr(6, 3));
-              }
-          }
-          else {
-            return "none";
-          }
+          return color(d.name)
         }
       );
+  rect.attr("onmouseover", "javascript:showInfo(evt)");
+  rect.attr("onmouseout", "javascript:hideInfo(evt)");
 }
 
 function name(d) {
   return d.parent
-      ?  name(d.parent) + " : " + d.name
-      : "Home : " + d.name;
+      ?  name(d.parent) + d.name + "/"
+      : "/";
 }
 
 function position() {
@@ -394,6 +259,15 @@ function position() {
       .style("height", function(d) { return Math.max(0, d.dy - 1) + "px"; });
 }
 
+function showInfo(evt) {
+  var data  = evt.target.__data__;
+
+  tooltip.show(data.name + "<br>" + humanReadable(data.value));
+}
+
+function hideInfo(evt) {
+  tooltip.hide();
+}
+
 </script>
-</body>
-</html>
+{% endblock %}

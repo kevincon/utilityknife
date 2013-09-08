@@ -4,6 +4,7 @@ from flask import Flask, render_template, session, redirect, abort, url_for, req
 from os.path import basename
 import json
 app = Flask(__name__)
+app.secret_key = FLASK_SECRET_KEY
 
 def get_dropbox_auth_flow(web_app_session):
     return DropboxOAuth2Flow(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, DROPBOX_APP_REDIRECT,
@@ -13,15 +14,21 @@ def dropbox_auth_start(web_app_session):
     authorize_url = get_dropbox_auth_flow(web_app_session).start()
     return redirect(authorize_url)
 
-# URL handler for root
 @app.route('/')
+def root():
+    return render_template('index.html')
+
+@app.route('/start')
 def start():
     return dropbox_auth_start(session)
 
-# URL handler for /dropbox-auth-finish
 @app.route('/dropbox-auth-finish')
 def dropbox_auth_finish():
     try:
+        error = request.args.get('error')
+        if error is not None:
+            raise DropboxOAuth2Flow.NotApprovedException()
+
         code = request.args.get('code')
         state = request.args.get('state')
         access_token, user_id, url_state = \
@@ -48,34 +55,41 @@ def dropbox_auth_finish():
 def success():
     client = DropboxClient(session['access_token'])
     data = walk(client, client.metadata('/'))
-    return render_template('display.html', json_data=data)
+    account = client.account_info()
+    username = account['display_name']
+    quota = float(account['quota_info']['quota'])
+    shared = float(account['quota_info']['shared'])
+    normal = float(account['quota_info']['normal'])
+    used = human_readable(normal + shared)
+    quota = human_readable(quota)
+    return render_template('display.html', json_data=data, username=username, quota=quota, used=used)
 
+def human_readable(bytes):
+    if bytes < 1024:
+        return "%.0f Bytes" % bytes;
+    elif bytes < 1048576:
+        return "%.2f KB" % (bytes / 1024)
+    elif bytes < 1073741824:
+        return "%.2f MB" % (bytes / 1048576)
+    else:
+        return "%.2f GB" % (bytes / 1073741824)
 
 def walk(client, metadata):
     dir_path = basename(metadata['path'])
-    result = {'name':basename(dir_path), 'children':[]}
+    bytes = metadata['bytes']
+    result = {'name':basename(dir_path), 'children':[], 'value':bytes}
     for dir_entry in metadata['contents']:
         path = dir_entry['path']
-        bytes = dir_entry['bytes']
-        if bytes is 0:
+        dir_entry_bytes = dir_entry['bytes']
+        if dir_entry_bytes is 0:
             result['children'].append(walk(client, client.metadata(path)))
         else:
-            child = {'name':basename(path), 'value':bytes}
+            child = {'name':basename(path), 'value':dir_entry_bytes}
             result['children'].append(child)
     #empty directories? do we care?
     if len(result['children']) is 0:
         _ = result.pop('children', None)
     return result
 
-@app.route('/display')
-def display():
-    # Load the flare.json file and pass it into the template.
-    json_data = ""
-    with open('dropbox.json', 'r') as f:
-        json_data = json.load(f)
-    return render_template('display.html', json_data=json_data)
-
 if __name__ == '__main__':
-    app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
-    app.debug = True
     app.run()

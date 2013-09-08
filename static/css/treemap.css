@@ -1,0 +1,38 @@
+#chart {
+  width: 960px;
+  height:500px;
+}
+
+.grandparent text {
+  font-weight: normal;
+  font-size: 100%;
+  color:  #DDD;
+}
+
+rect {
+  fill: none;
+  stroke: #ffffff;
+}
+
+rect.parent,
+.grandparent rect {
+  stroke-width: 1px;
+}
+
+rect.parent:hover {
+  outline: 1px solid #883;
+}
+
+.children rect.parent,
+.grandparent rect {
+  cursor: pointer;
+}
+
+rect.parent {
+  pointer-events: all;
+}
+
+.children:hover rect.child,
+.grandparent:hover rect {
+  fill: #EEE;
+}

@@ -38,4 +38,4 @@ nosetests.xml
 venv
 
 # app-specific
-secrets.py
+.env
