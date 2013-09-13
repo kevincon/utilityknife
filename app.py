@@ -9,7 +9,7 @@ from util import human_readable, update_progress, walk, get_metadata, get_job_fr
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
 
-q = Queue(connection=conn, default_timeout=600)
+q = Queue(connection=conn, default_timeout=1800)
 
 def get_dropbox_auth_flow(web_app_session):
     return DropboxOAuth2Flow(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, DROPBOX_APP_REDIRECT,
