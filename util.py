@@ -1,6 +1,7 @@
 import os, time
 from rq import get_current_job
 from rq.job import Job, NoSuchJobError
+from dropbox.rest import ErrorResponse
 from flask import session
 
 def human_readable(bytes):
