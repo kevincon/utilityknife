@@ -6,14 +6,22 @@
 
 <div align="center">
   <p><b>{{ username }}'s Dropbox:</b> {{ used }} / {{ quota }}</p>
-  <div id="chart"></div>
+  <div id="loading">
+    <p id="analyzing"></p>
+    <div class="progress progress-striped active">
+      <div class="progress-bar"  role="progressbar" aria-valuetransitiongoal="0" aria-valuemin="0" aria-valuemax="100">
+      </div>
+    </div>
+  </div>
+  <div id="chart" style="display: none;"></div>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/d3.min.js"></script>
-<script>
+<script type="text/javascript" src="/static/js/d3.min.js"></script>
+<script type="text/javascript" src="/static/js/bootstrap-progressbar.min.js"></script>
+<script type="text/javascript">
 var margin = {top: 30, right: 0, bottom: 0, left: 0},
     width = $("#chart").width(),
     height = $("#chart").height() - margin.top - margin.bottom,
@@ -35,40 +43,70 @@ var treemap = d3.layout.treemap()
     .ratio(height / width * 0.5 * (1 + Math.sqrt(5)))
     .round(false);
 
-var svg = d3.select("#chart").append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.bottom + margin.top)
-    .style("margin-left", - margin.left + "px")
-    .style("margin.right", - margin.right + "px")
-  .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-    .style("shape-rendering", "crispEdges");
-
-var grandparent = svg.append("g")
-    .attr("class", "grandparent");
-
-grandparent.append("rect")
-    .attr("y", -margin.top)
-    .attr("width", width)
-    .attr("height", margin.top);
-grandparent.append("text")
-    .attr("fill", "#777")
-    .style("letter-spacing", "+0.05em")
-    .attr("x", 6)
-    .attr("y",  margin.top - 60)
-    .attr("dy", "0.5em");
+var svg, grandparent;
 
 // Initialize tooltips
 $(document).ready(function () {
   $("[rel=tooltip]").tooltip();
 });
 
-var root = {{ json_data|tojson|safe }};
+// Insert timer here
+$('.progress .progress-bar').progressbar({display_text: 'fill'});
+var interval = setInterval(pollServer, 500);
 
-initialize(root);
-accumulate(root);
-layout(root);
-display(root);
+function pollServer() {
+  $.get("/display_result", processServerData);
+}
+
+function processServerData(data, status) {
+  var bar = $('.progress .progress-bar');
+  if (data["ready"] == true) {
+    window.clearInterval(interval);
+    bar.attr('aria-valuetransitiongoal', 100);
+    bar.progressbar({display_text: 'fill'});
+    loadMap(data["result"]);
+  } else {
+    if (data["progress"] != undefined) {
+      bar.attr('aria-valuetransitiongoal', data["progress"]);
+      bar.progressbar({display_text: 'fill'});
+      if (data["current"] != undefined) {
+        $("#analyzing").text("Analyzing " + data["current"] + "...");
+      }
+    }
+  }
+}
+
+function loadMap(json) {
+  $("#loading").hide();
+  $("#chart").show();
+  svg = d3.select("#chart").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.bottom + margin.top)
+    .style("margin-left", - margin.left + "px")
+    .style("margin.right", - margin.right + "px")
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+    .style("shape-rendering", "crispEdges");
+
+  grandparent = svg.append("g")
+      .attr("class", "grandparent");
+
+  grandparent.append("rect")
+      .attr("y", -margin.top)
+      .attr("width", width)
+      .attr("height", margin.top);
+  grandparent.append("text")
+      .attr("fill", "#777")
+      .style("letter-spacing", "+0.05em")
+      .attr("x", 6)
+      .attr("y",  margin.top - 60)
+      .attr("dy", "0.5em");
+
+  initialize(json);
+  accumulate(json);
+  layout(json);
+  display(json);
+}
 
 function initialize(root) {
   root.x = root.y = 0;

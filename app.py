@@ -1,10 +1,15 @@
 from dropbox.client import DropboxOAuth2Flow, DropboxClient
+from dropbox.rest import ErrorResponse
 from secrets import *
-from flask import Flask, render_template, session, redirect, abort, url_for, request
-from os.path import basename
-import json
+from flask import Flask, render_template, session, redirect, abort, url_for, request, jsonify
+from rq import Queue
+from worker import conn
+from util import human_readable, update_progress, walk, get_metadata, get_job_from_key
+
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
+
+q = Queue(connection=conn, default_timeout=600)
 
 def get_dropbox_auth_flow(web_app_session):
     return DropboxOAuth2Flow(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, DROPBOX_APP_REDIRECT,
@@ -49,47 +54,57 @@ def dropbox_auth_finish():
 
     session['access_token'] = access_token
 
-    return redirect(url_for('success'))
+    return redirect(url_for('display'))
 
-@app.route('/success')
-def success():
-    client = DropboxClient(session['access_token'])
-    data = walk(client, client.metadata('/'))
+@app.route('/display')
+def display():
+    if 'access_token' not in session:
+        abort(400)
+
+    if 'job' in session:
+        job = get_job_from_key(session['job'], conn)
+        # Only rely on a previous result if the same user is logged in (same access_token)
+        if job is not None and session['access_token'] == job.meta['access_token']:
+            return render_template('display.html', username=session['username'], quota=session['quota'], used=session['used'])
+
+    try:
+        client = DropboxClient(session['access_token'])
+    except ErrorResponse, e:
+        abort(401)
+
     account = client.account_info()
-    username = account['display_name']
+    session['username'] = account['display_name']
     quota = float(account['quota_info']['quota'])
     shared = float(account['quota_info']['shared'])
     normal = float(account['quota_info']['normal'])
-    used = human_readable(normal + shared)
-    quota = human_readable(quota)
-    return render_template('display.html', json_data=data, username=username, quota=quota, used=used)
+    total_bytes = int(normal + shared)
+    session['used'] = human_readable(normal + shared)
+    session['quota'] = human_readable(quota)
 
-def human_readable(bytes):
-    if bytes < 1024:
-        return "%.0f Bytes" % bytes;
-    elif bytes < 1048576:
-        return "%.2f KB" % (bytes / 1024)
-    elif bytes < 1073741824:
-        return "%.2f MB" % (bytes / 1048576)
-    else:
-        return "%.2f GB" % (bytes / 1073741824)
+    job = q.enqueue(walk, client, get_metadata(client, '/'), 0, total_bytes)
+    job.meta['access_token'] = session['access_token'];
+    job.save()
+    update_progress(job, 0, "/")
+    session['job'] = job.key
 
-def walk(client, metadata):
-    dir_path = basename(metadata['path'])
-    bytes = metadata['bytes']
-    result = {'name':basename(dir_path), 'children':[], 'value':bytes}
-    for dir_entry in metadata['contents']:
-        path = dir_entry['path']
-        dir_entry_bytes = dir_entry['bytes']
-        if dir_entry_bytes is 0:
-            result['children'].append(walk(client, client.metadata(path)))
-        else:
-            child = {'name':basename(path), 'value':dir_entry_bytes}
-            result['children'].append(child)
-    #empty directories? do we care?
-    if len(result['children']) is 0:
-        _ = result.pop('children', None)
-    return result
+    return render_template('display.html', username=session['username'], quota=session['quota'], used=session['used'])
+
+@app.route('/display_result')
+def display_result():
+    if 'job' not in session:
+        return jsonify(ready=False, progress=0)
+
+    job = get_job_from_key(session['job'], conn)
+    if job is None:
+        abort(400)
+
+    if job.result is None:
+        return jsonify(ready=False, current=job.meta['current'], progress=job.meta['progress'])
+
+    data, bytes_read = job.result
+    return jsonify(ready=True, result=data)
+
 
 if __name__ == '__main__':
+    app.debug = True
     app.run()
