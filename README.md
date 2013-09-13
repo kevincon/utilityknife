@@ -6,7 +6,7 @@ UtilityKnife is a web application that visualizes a user's Dropbox space usage/a
 UtilityKnife was built in under 40 hours by Kevin Conley and Carolynn Sullivan at the PennApps Fall 2013 hackathon.
 
 ### Inspiration
-UtilityKnife's visualization using the treemap from D3.js was heavily inspired by Ben Garvey's Philadelphia budget visualization web application: http://budget.brettmandel.com/
+UtilityKnife's visualization using the treemap from D3.js was heavily inspired by and built on Ben Garvey's Philadelphia budget visualization web application: http://budget.brettmandel.com/
 
 ### Getting started
 
@@ -14,6 +14,7 @@ UtilityKnife's visualization using the treemap from D3.js was heavily inspired b
 * Python 2.6
 * pip
 * virtualenv
+* redis
 
 #### Virtualenv
 After cloning the repository, create a virtualenv called "venv" and activate it:
@@ -41,7 +42,12 @@ FLASK_SECRET_KEY=fill_me_in
 Likewise, it is important to define these environment variables for the production server (i.e. Heroku).
 
 #### Running the App
-Start the app with:
+First, open a terminal and start the redis server:
+```
+redis-server /path/to/redis.conf
+```
+
+Then, open another terminal and start the app with:
 ```
 foreman start
 ```
