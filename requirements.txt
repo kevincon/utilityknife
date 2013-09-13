@@ -4,4 +4,3 @@ Werkzeug==0.9.4
 gunicorn==18.0
 dropbox==1.6.0
 rq==0.3.4
-flask-rq==0.2
