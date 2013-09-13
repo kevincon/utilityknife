@@ -43,10 +43,32 @@ var treemap = d3.layout.treemap()
     .ratio(height / width * 0.5 * (1 + Math.sqrt(5)))
     .round(false);
 
-var svg, grandparent;
+var svg = d3.select("#chart").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.bottom + margin.top)
+    .style("margin-left", - margin.left + "px")
+    .style("margin.right", - margin.right + "px")
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+    .style("shape-rendering", "crispEdges");
+
+var grandparent = svg.append("g")
+    .attr("class", "grandparent");
+
+grandparent.append("rect")
+    .attr("y", -margin.top)
+    .attr("width", width)
+    .attr("height", margin.top);
+grandparent.append("text")
+    .attr("fill", "#777")
+    .style("letter-spacing", "+0.05em")
+    .attr("x", 6)
+    .attr("y",  margin.top - 60)
+    .attr("dy", "0.5em");
 
 // Initialize tooltips
 $(document).ready(function () {
+  $("#chart").hide();
   $("[rel=tooltip]").tooltip();
 });
 
@@ -78,34 +100,14 @@ function processServerData(data, status) {
 
 function loadMap(json) {
   $("#loading").hide();
-  $("#chart").show();
-  svg = d3.select("#chart").append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.bottom + margin.top)
-    .style("margin-left", - margin.left + "px")
-    .style("margin.right", - margin.right + "px")
-    .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-    .style("shape-rendering", "crispEdges");
-
-  grandparent = svg.append("g")
-      .attr("class", "grandparent");
-
-  grandparent.append("rect")
-      .attr("y", -margin.top)
-      .attr("width", width)
-      .attr("height", margin.top);
-  grandparent.append("text")
-      .attr("fill", "#777")
-      .style("letter-spacing", "+0.05em")
-      .attr("x", 6)
-      .attr("y",  margin.top - 60)
-      .attr("dy", "0.5em");
-
-  initialize(json);
-  accumulate(json);
-  layout(json);
-  display(json);
+  // Only init the chart once in case the timer fires more than once before it's canceled
+  if ($("#chart").is(':hidden')) {
+    $("#chart").show();
+    initialize(json);
+    accumulate(json);
+    layout(json);
+    display(json);
+  }
 }
 
 function initialize(root) {
