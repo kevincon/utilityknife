@@ -40,3 +40,9 @@ venv
 
 # app-specific
 .env
+
+# Intellij
+.idea/
+
+# Redis
+dump.rdb
