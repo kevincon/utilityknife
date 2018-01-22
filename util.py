@@ -1,12 +1,11 @@
-import os, time
+from dropbox import Dropbox
+from dropbox.files import FileMetadata, FolderMetadata
 from rq import get_current_job
 from rq.job import Job, NoSuchJobError
-from dropbox.rest import ErrorResponse
-from flask import session
 
 def human_readable(bytes):
     if bytes < 1024:
-        return "%.0f Bytes" % bytes;
+        return "%.0f Bytes" % bytes
     elif bytes < 1048576:
         return "%.2f KB" % (bytes / 1024)
     elif bytes < 1073741824:
@@ -14,45 +13,44 @@ def human_readable(bytes):
     else:
         return "%.2f GB" % (bytes / 1073741824)
 
+def get_entries_of_folder(client, folder_path):
+    list_folder_result = client.files_list_folder(folder_path)
+    all_entries = list_folder_result.entries
+    while list_folder_result.has_more:
+        list_folder_result = client.files_list_folder_continue(list_folder_result.cursor)
+        all_entries += list_folder_result.entries
+    return all_entries
+
 def walk(client, metadata, bytes_read, total_bytes):
     job = get_current_job()
-    dir_path = os.path.basename(metadata['path'])
-    bytes = metadata['bytes']
-    bytes_read += int(bytes)
-    update_progress(job, float(bytes_read) / total_bytes, dir_path)
+    if isinstance(metadata, FileMetadata):
+        size_bytes = metadata.size
+        bytes_read += int(size_bytes)
+        update_progress(job, float(bytes_read) / total_bytes, metadata.name)
+        return {'name': metadata.name, 'value': size_bytes}, bytes_read
+    elif isinstance(metadata, FolderMetadata):
+        result, bytes_read = walk_folder(client, metadata.path_lower, metadata.name, bytes_read, total_bytes)
+        # empty directories? do we care?
+        if len(result['children']) is 0:
+            result.pop('children', None)
+        return result, bytes_read
+    else:
+        raise Exception('Unknown metadata type: %s' % str(metadata))
 
-    result = {'name':os.path.basename(dir_path), 'children':[], 'value':bytes}
-
-    if 'contents' in metadata:
-        for dir_entry in metadata['contents']:
-            path = dir_entry['path']
-            # Skip hidden files, shit gets too rowdy
-            if os.path.basename(path)[0] == '.':
-                continue
-            dir_entry_bytes = dir_entry['bytes']
-            bytes_read += int(dir_entry_bytes)
-            update_progress(job, float(bytes_read) / total_bytes, path)
-            if dir_entry_bytes is 0:
-                child, bytes_read = walk(client, get_metadata(client, path), bytes_read, total_bytes)
-            else:
-                child = {'name':os.path.basename(path), 'value':dir_entry_bytes}
-            result['children'].append(child)
-    #empty directories? do we care?
-    if len(result['children']) is 0:
-        _ = result.pop('children', None)
+def walk_folder(client, full_path, path_basename, bytes_read, total_bytes):
+    result = {'name': path_basename, 'children': [], 'value': 0}
+    all_entries = get_entries_of_folder(client, full_path)
+    for entry in all_entries:
+        # Skip hidden files, shit gets too rowdy
+        if entry.name.startswith('.'):
+            continue
+        child, bytes_read = walk(client, entry, bytes_read, total_bytes)
+        result['children'].append(child)
     return result, bytes_read
 
-def get_metadata(client, path):
-    backoff = 0.5
-    while True:
-        try:
-            metadata = client.metadata(path)
-            return metadata
-        except ErrorResponse, e:
-            #exponential back off to appease api limits
-            time.sleep(backoff)
-            backoff *= 2
-            continue
+def walk_entire_dropbox(access_token, total_bytes):
+    client = Dropbox(access_token)
+    return walk_folder(client, '', '/', 0, total_bytes)
 
 def update_progress(job, progress, current_path):
     progress_int = int(progress * 100)
