@@ -28,3 +28,7 @@ before_script:
 
 script:
   - py.test --driver Firefox --base-url http://localhost:5000 --sensitive-url "utilityknife\.com" tests/
+
+branches:
+  only:
+  - master
