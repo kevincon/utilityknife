@@ -8,7 +8,7 @@ services:
 
 before_install:
   - gem install foreman
-  - pip install pytest
+  - pip install -r dev_requirements.txt
 
 before_script:
   - foreman start &
