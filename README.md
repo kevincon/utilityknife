@@ -1,4 +1,4 @@
-UtilityKnife
+UtilityKnife [![Build Status](https://travis-ci.com/kevincon/utilityknife.svg?branch=master)](https://travis-ci.com/kevincon/utilityknife)
 =========
 ![Animated GIF demo](static/images/demo.gif "Animated GIF demo")
 UtilityKnife is a web application that visualizes a user's Dropbox space usage/allocation as a treemap. It is similar to desktop programs like Windirstat, KDirStat, Disk Inventory X, Grand Perspective, and Space Monger.
