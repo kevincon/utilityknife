@@ -1,0 +1,34 @@
+language: python
+
+python:
+  - "2.7"
+
+addons:
+  firefox: latest
+
+services:
+  - redis-server
+
+before_install:
+  - gem install foreman
+  - pip install -r dev_requirements.txt
+  # Copied from https://github.com/pytest-dev/pytest-selenium/blob/a5ed7d08dea00b9cffb6df3beac8d70517e9de4c/.travis.yml#L40-L45
+  - export GECKODRIVER_DOWNLOAD=`curl -s 'https://api.github.com/repos/mozilla/geckodriver/releases/latest' | python -c "import sys, json; r = json.load(sys.stdin); print([a for a in r['assets'] if 'linux64' in a['name']][0]['browser_download_url']);"`
+  - curl -L -o /tmp/geckodriver.tar.gz $GECKODRIVER_DOWNLOAD
+  - mkdir $HOME/geckodriver && tar xvf /tmp/geckodriver.tar.gz -C $HOME/geckodriver
+  - export PATH=$HOME/geckodriver:$PATH
+  - geckodriver --version
+
+before_script:
+  # https://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-directly
+  - export DISPLAY=:99.0
+  - sh -e /etc/init.d/xvfb start
+  - foreman start &
+  - sleep 3
+
+script:
+  - py.test --driver Firefox --base-url http://localhost:5000 --sensitive-url "utilityknife\.com" tests/
+
+branches:
+  only:
+  - master
