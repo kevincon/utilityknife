@@ -31,4 +31,8 @@ script:
 
 branches:
   only:
-  - master
+    - master
+  
+notifications:
+  email:
+    - mail@kevintechnology.com
