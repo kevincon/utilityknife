@@ -12,9 +12,8 @@ services:
 before_install:
   - gem install foreman
   - pip install -r dev_requirements.txt
-  # Copied from https://github.com/pytest-dev/pytest-selenium/blob/a5ed7d08dea00b9cffb6df3beac8d70517e9de4c/.travis.yml#L40-L45
-  - export GECKODRIVER_DOWNLOAD=`curl -s 'https://api.github.com/repos/mozilla/geckodriver/releases/latest' | python -c "import sys, json; r = json.load(sys.stdin); print([a for a in r['assets'] if 'linux64' in a['name']][0]['browser_download_url']);"`
-  - curl -L -o /tmp/geckodriver.tar.gz $GECKODRIVER_DOWNLOAD
+  # Adapted from https://github.com/pytest-dev/pytest-selenium/blob/a5ed7d08dea00b9cffb6df3beac8d70517e9de4c/.travis.yml#L40-L45
+  - curl -L -o /tmp/geckodriver.tar.gz https://github.com/mozilla/geckodriver/releases/download/v0.23.0/geckodriver-v0.23.0-linux64.tar.gz
   - mkdir $HOME/geckodriver && tar xvf /tmp/geckodriver.tar.gz -C $HOME/geckodriver
   - export PATH=$HOME/geckodriver:$PATH
   - geckodriver --version
