@@ -1,6 +1,6 @@
 Flask==0.12.3
 Jinja2==2.10.1
-Werkzeug==0.9.4
+Werkzeug==0.15.3
 gunicorn==19.5.0
 dropbox==8.6.0
 rq==0.10.0
